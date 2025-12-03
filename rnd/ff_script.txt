@@ -1,0 +1,6 @@
+Hello, so our project is threeDmed, an informational website for visualizing the anatomy of the human body.
+SO for instance, our homepage would be something like this, a full human anatomy, 
+where you could click say, the stomach, and be brought to another page with a 3D stomach model.
+Now, I know that might not sound impressive, but what if you could step in to the stomach itself?
+Well, we'll also have a visualization built in three.js with a 1st person view inside the stomach, as if you were in the belly of the beast, floating on a piece of toast while trying to take cover from all the acid flying around. 
+If that's too much to stomach, we'll also breathe life into the lungs, and make one that's lighter on the heart. Thank You.

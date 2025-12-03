@@ -8,9 +8,9 @@ var mrbones;
 
 
 window.onload = function() {
-
     scene = new THREE.Scene();
-  
+    jijde
+
     // setup the camera
     var fov = 75;
     var ratio = window.innerWidth / window.innerHeight;
@@ -51,8 +51,8 @@ window.onload = function() {
 
         if (intersects) {
           console.log('Ray to Mr. Bones', intersects[0].point);
-          console.log(intersects[0].object.userData.URL);
-          window.open(intersects[0].object.userData.URL);
+          //console.log(intersects[0].object.userData.URL);
+          window.open();
           
         }
   
@@ -129,13 +129,20 @@ window.onload = function() {
     })
     */ 
 
-    // Loading Mr. Bones
     const gltfLoader = new GLTFLoader();
-    const url = 'models/mrbones/scene.gltf';
+    // Loading Mr. Bones
+    var url = 'models/mrbones/scene.gltf';
     gltfLoader.load(url, (gltf) => {
-      mrbones = gltf.scene;
-      mrbones.userData = { URL: "https://stackoverflow.com"};
-      scene.add(mrbones);
+        mrbones = gltf.scene;
+        mrbones.userData = { URL: "https://www.stackoverflow.com"};
+        scene.add(mrbones);
+    });
+    // Loading organs
+    url = 'models/mrbones/scene.gltf';
+    gltfLoader.load(url, (gltf) => {
+        mrbones = gltf.scene;
+        mrbones.userData = { URL: "https://www.stackoverflow.com"};
+        scene.add(mrbones);
     });
 
     // interaction
@@ -148,34 +155,6 @@ window.onload = function() {
 function animate() {
   
     requestAnimationFrame( animate );
-
-    if (scene.children.length > 4) {
-        // change the opacity of each placed torus (4th+ item in the scene)
-        scene.children.map((obj, i) => {
-            if (i > 3) {
-                if (FLICKERING) {
-                    obj.material.opacity = Math.random();
-                    obj.material.transparent = true;
-                    obj.material.needsUpdate = true;
-                }
-                var T = Math.PI;
-
-                var x = Math.sin(T/2) * 0;
-                var y = Math.sin(T/2) * 1;
-                var z = Math.sin(T/2) * 0;
-                var w = Math.sin(T/2);
-
-                var q = new THREE.Quaternion(x, y, z, w);
-
-                obj.quaternion.slerp(q, -0.1);
-
-
-                return obj;
-            } else {
-                return obj;
-            }
-        });
-    }
   
     // and here..
     controls.update();

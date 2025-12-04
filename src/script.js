@@ -3,19 +3,17 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { PLYLoader } from 'three/addons/loaders/PLYLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { Pane } from "tweakpane";
-var renderer, controls, scene, camera;
-var mrbones;
 
+var controls, renderer, scene, camera;
 
-window.onload = function() {
+window.onload = async function() {
     scene = new THREE.Scene();
-    jijde
 
     // setup the camera
-    var fov = 75;
-    var ratio = window.innerWidth / window.innerHeight;
-    var zNear = 1;
-    var zFar = 100;
+    const fov = 75;
+    const ratio = window.innerWidth / window.innerHeight;
+    const zNear = 1;
+    const zFar = 100;
     camera = new THREE.PerspectiveCamera( fov, ratio, zNear, zFar );
     camera.position.set(0, 0, 25);
   
@@ -24,39 +22,39 @@ window.onload = function() {
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
   
-  
-  
     renderer.domElement.onmousedown = function( e ){
         //console.log(scene);
         //console.log('Yay! We clicked!');
   
-        var pixel_coords = new THREE.Vector2( e.clientX, e.clientY );
+        const pixel_coords = new THREE.Vector2( e.clientX, e.clientY );
   
         //console.log('Pixel coords', pixel_coords);
   
-        var vp_coords = new THREE.Vector2( 
+        const vp_coords = new THREE.Vector2( 
                     ( pixel_coords.x / window.innerWidth ) * 2 - 1,  //X
                     -( pixel_coords.y / window.innerHeight ) * 2 + 1) // Y
   
         //console.log('Viewport coords', vp_coords);
   
-        var vp_coords_near = new THREE.Vector3( vp_coords.x, vp_coords.y, 0);
+        const vp_coords_near = new THREE.Vector3( vp_coords.x, vp_coords.y, 0);
   
   
-        var raycaster = new THREE.Raycaster();
+        const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vp_coords_near, camera);
-        var intersects = raycaster.intersectObject(invisible_plane);
+        let intersects = raycaster.intersectObject(invisible_plane);
         console.log('Ray to Invisible Plane', intersects[0].point);
-        var intersects = raycaster.intersectObject(mrbones);
+        intersects = raycaster.intersectObject(mrbones);
+        console.log(intersects);
 
-        if (intersects) {
-          console.log('Ray to Mr. Bones', intersects[0].point);
-          //console.log(intersects[0].object.userData.URL);
-          window.open();
-          
+        if (intersects.length !== 0) {
+            controls.enabled = false;
+            console.log('Ray to Mr. Bones', intersects[0].point);
+            console.log(intersects[0].object.userData);
+            window.open();
         }
   
         // update torus position
+
         if (e.shiftKey){
             controls.enabled = false
             // store a reference to the last placed torus in the global variable .
@@ -89,10 +87,10 @@ window.onload = function() {
 
   
     // setup lights
-    var ambientLight = new THREE.AmbientLight();
+    const ambientLight = new THREE.AmbientLight();
     scene.add(ambientLight);
   
-    var light = new THREE.DirectionalLight( 0xffffff, 5.0 );
+    const light = new THREE.DirectionalLight( 0xffffff, 5.0 );
     light.position.set( 10, 100, 10 );
     scene.add( light );
 
@@ -102,7 +100,7 @@ window.onload = function() {
         visible: false
     });
 
-    var invisible_plane = new THREE.Mesh( geometry, material );
+    const invisible_plane = new THREE.Mesh( geometry, material );
 
     scene.add(invisible_plane);
 
@@ -129,21 +127,17 @@ window.onload = function() {
     })
     */ 
 
-    const gltfLoader = new GLTFLoader();
     // Loading Mr. Bones
+    const gltfLoader = new GLTFLoader();
+
+    var mrbones;
     var url = 'models/mrbones/scene.gltf';
     gltfLoader.load(url, (gltf) => {
-        mrbones = gltf.scene;
-        mrbones.userData = { URL: "https://www.stackoverflow.com"};
+        mrbones = gltf.scene.children[0];
+        mrbones.userData.URL = "https://www.stackoverflow.com";
         scene.add(mrbones);
     });
-    // Loading organs
-    url = 'models/mrbones/scene.gltf';
-    gltfLoader.load(url, (gltf) => {
-        mrbones = gltf.scene;
-        mrbones.userData = { URL: "https://www.stackoverflow.com"};
-        scene.add(mrbones);
-    });
+    console.log(mrbones);
 
     // interaction
     controls = new OrbitControls( camera, renderer.domElement );

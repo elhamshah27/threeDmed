@@ -8,6 +8,7 @@ General links and findings for the 3D visualizations we plan to do
 - [Small & Large Intestine](https://sketchfab.com/3d-models/small-and-large-intestine-8a1ca8e3ca224cdeb9264674416bde38)
 - [Human Heart (Outside Only)](https://sketchfab.com/3d-models/human-heart-3d-model-anatomy-medical-project-5da08bb137014f0392c69f9997f777cd)
 - [Human Heart (Cross Section)](https://sketchfab.com/3d-models/beating-heart-d9845afb1ee64ad094adc96320c67d98)
+- [Heart (University of Dundee)](https://sketchfab.com/anatomy_dundee/collections/heart-85f0156335a5447da37f207fda9d2927)
 
 ### Datasets
 
@@ -20,4 +21,9 @@ General links and findings for the 3D visualizations we plan to do
 - [HTML display](https://www.youtube.com/watch?v=LsoidaI-8qQ)
 - [Water Texture](https://www.youtube.com/watch?v=PfFq-2X4dYo)
 - [three.js models as hyperlinks](https://stackoverflow.com/questions/24690731/three-js-3d-models-as-hyperlink)
+- [HTML on 3D objects](https://threejs.org/manual/#en/align-html-elements-to-3d)
+- [Mouse direction movement](https://waelyasmina.net/articles/how-to-create-a-dynamic-camera-movement-effect-in-three-js/)
 
+
+### 3D Caves
+- 64:10 widescreen stretch

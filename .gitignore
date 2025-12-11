@@ -1,2 +1,2 @@
-static/modules/zip/
-models/*.zip
+modules/zip/
+models/zip/

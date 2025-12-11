@@ -37,13 +37,15 @@ scene.add(axes);
 
 console.log('Loading brain...');
 
+var brain;
 const loader = new GLTFLoader();
 loader.load(
   '../models/fullbrain.glb',
   (gltf) => {
     console.log('Brain model loaded!', gltf);
 
-    const brain = gltf.scene;
+    brain = gltf.scene;
+    brain.userData.URL = "/skybox-brain";
     scene.add(brain);
 
     brain.traverse((child) => {
@@ -52,6 +54,31 @@ loader.load(
     }
 });
 
+    renderer.domElement.onmousedown = function( e ){
+  
+        const pixel_coords = new THREE.Vector2( e.clientX, e.clientY );
+  
+        const vp_coords = new THREE.Vector2( 
+                    ( pixel_coords.x / window.innerWidth ) * 2 - 1,  //X
+                    -( pixel_coords.y / window.innerHeight ) * 2 + 1) // Y
+  
+        const vp_coords_near = new THREE.Vector3( vp_coords.x, vp_coords.y, 0);
+  
+  
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(vp_coords_near, camera);
+
+        function clickah (ref){
+            const intersects = raycaster.intersectObject(ref);
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                console.log(obj);
+                window.open(ref.userData.URL);
+            }
+        }
+        clickah(brain);
+    }
+        //
     // Force all meshes visible and bright
     let meshCount = 0;
     brain.traverse((child) => {

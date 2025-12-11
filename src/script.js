@@ -15,11 +15,12 @@ window.onload = async function() {
     const zNear = 1;
     const zFar = 100;
     camera = new THREE.PerspectiveCamera( fov, ratio, zNear, zFar );
-    camera.position.set(0, 0, 25);
+    camera.position.set(0, 5, 15);
   
     // create renderer and setup the canvas
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize( window.innerWidth, window.innerHeight );
+    //renderer.setClearColor("blue")
     document.body.appendChild( renderer.domElement );
   
     renderer.domElement.onmousedown = function( e ){
@@ -41,61 +42,22 @@ window.onload = async function() {
   
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(vp_coords_near, camera);
-        let intersects = raycaster.intersectObject(invisible_plane);
-        console.log('Ray to Invisible Plane', intersects[0].point);
-        
-        if (mrbones) {
-            intersects = raycaster.intersectObject(mrbones, true);
-            console.log(intersects);
-
-            if (intersects.length !== 0) {
-                controls.enabled = false;
-                const hitPoint = intersects[0].point;
-                console.log('Click position - X:', hitPoint.x.toFixed(2), 'Y:', hitPoint.y.toFixed(2), 'Z:', hitPoint.z.toFixed(2));
-                
-                // More precise region detection
-                // Stomach region: middle abdomen area (more restrictive)
-                // Y: between 0 and 5 (middle section, not too high or low)
-                // X: between -2.5 and 2.5 (centered, not on sides)
-                // Z: front of body (positive Z, closer to camera)
-                const isStomachRegion = hitPoint.y >= 0 && hitPoint.y <= 5 && 
-                                       Math.abs(hitPoint.x) < 2.5 && 
-                                       hitPoint.z > -2;
-                
-                // Heart region: upper chest area
-                // Y: above 5, below 12
-                // X: centered
-                const isHeartRegion = hitPoint.y > 5 && hitPoint.y < 12 && 
-                                    Math.abs(hitPoint.x) < 2.5 && 
-                                    hitPoint.z > -2;
-                
-                // Brain region: head area
-                // Y: above 12
-                const isBrainRegion = hitPoint.y >= 12 && Math.abs(hitPoint.x) < 3;
-                
-                if (isStomachRegion) {
-                    console.log('✓ Stomach area detected! Navigating to stomach page...');
-                    window.location.href = 'stomach/index.html';
-                    return;
-                }
-                
-                if (isHeartRegion) {
-                    console.log('✓ Heart area detected! Navigating to heart page...');
-                    window.location.href = 'heart/index.html';
-                    return;
-                }
-                
-                if (isBrainRegion) {
-                    console.log('✓ Brain area detected!');
-                    // Navigate to brain page when it's created
-                    // window.location.href = 'brain/index.html';
-                    return;
-                }
-                
-                // If none of the regions match, just log it
-                console.log('Click detected but not in a specific organ region');
+        //let intersects = raycaster.intersectObject(invisible_plane);
+        //console.log('Ray to Invisible Plane', intersects[0].point);
+        //console.log(mrbones);
+        function clickah (ref){
+            const intersects = raycaster.intersectObject(ref);
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                console.log(obj);
+                window.open(ref.userData.URL);
             }
         }
+        //clickah(mrbones);
+        clickah(brain);
+        clickah(stomach);
+        //
+
   
         // update torus position
 
@@ -110,21 +72,6 @@ window.onload = async function() {
         }
     };
 
-    renderer.domElement.onmousemove = (e) => {
-        if (e.shiftKey && torus){
-            const DELTA = e.movementY * 0.1;
-            torus.scale.set(torus.scale.x + DELTA,
-                            torus.scale.y + DELTA,
-                            torus.scale.z + DELTA);
-            if (torus.scale.x < 0) {
-                console.log('true');
-                torus.material.color.set(COLOR_1);
-            } else {
-                console.log('false');
-                torus.material.color.set(COLOR_2);
-            }
-        }
-    };
 
     renderer.domElement.onmouseup = function() {
         controls.enabled = true;
@@ -133,12 +80,26 @@ window.onload = async function() {
 
   
     // setup lights
-    const ambientLight = new THREE.AmbientLight();
+    const ambientLight = new THREE.AmbientLight("white", 10);
     scene.add(ambientLight);
   
-    const light = new THREE.DirectionalLight( 0xffffff, 5.0 );
+    var light = new THREE.DirectionalLight( 0xffffff, 7.0 );
     light.position.set( 10, 100, 10 );
     scene.add( light );
+    light = new THREE.DirectionalLight( 0xffffff, 7.0 );
+    light.position.set( -10, 100, -10 );
+    scene.add( light );
+    light = new THREE.DirectionalLight( 0xffffff, 7.0 );
+    light.position.set( 10, 25, 10 );
+    scene.add( light );
+    /*
+    light = new THREE.DirectionalLight( 0xffffff, 7.0 );
+    light.position.set( -10, 100, 10 );
+    scene.add( light );
+    light = new THREE.DirectionalLight( 0xffffff, 7.0 );
+    light.position.set( 10, 100, 10 );
+    scene.add( light );
+    */
 
     // invisible plane
     const geometry = new THREE.PlaneGeometry( 10000, 10000 );
@@ -146,9 +107,9 @@ window.onload = async function() {
         visible: false
     });
 
-    const invisible_plane = new THREE.Mesh( geometry, material );
+    //const invisible_plane = new THREE.Mesh( geometry, material );
 
-    scene.add(invisible_plane);
+    //scene.add(invisible_plane);
 
     // LOAD THE ARMADILLO
     /*
@@ -174,17 +135,80 @@ window.onload = async function() {
     */ 
 
     // Loading Mr. Bones
-    const gltfLoader = new GLTFLoader();
 
     var mrbones;
     var url = 'models/mrbones/scene.gltf';
+    const gltfLoader = new GLTFLoader();
     gltfLoader.load(url, (gltf) => {
         mrbones = gltf.scene.children[0];
-        mrbones.userData.URL = "https://www.stackoverflow.com";
+        //mrbones.userData.URL = "https://threeDmed.org";
+
+        mrbones.scale.x = 1;
+        mrbones.scale.y = 1;
+        mrbones.scale.z = 1;
+
+        mrbones.translateX(0);
+        mrbones.translateY(0);
+        mrbones.translateZ(0);
+
         scene.add(mrbones);
     });
-    console.log(mrbones);
 
+    // Brain
+    var brain;
+    url = 'models/fullbrain.glb'
+    gltfLoader.load(url, (gltf) => {
+        brain = gltf.scene.children[0];
+        brain.userData.URL = "/brain";
+
+        const q = rotationQuaternion(90, [0, 1, 0]);
+        brain.quaternion.w = q.w
+        brain.quaternion.x = q.x
+        brain.quaternion.y = q.y
+        brain.quaternion.z = q.z
+
+        const scale = .007;
+        brain.scale.x = 1 * scale;
+        brain.scale.y = 1 * scale;
+        brain.scale.z = 1 * scale;
+
+
+        brain.translateX(0);
+        brain.translateY(6.7);
+        brain.translateZ(0);
+
+        scene.add(brain);
+    });
+
+    // Stomach
+    var stomach;
+    url = 'models/organs/stomach.glb'
+    gltfLoader.load(url, (gltf) => {
+        stomach = gltf.scene.children[0];
+        console.log(stomach);
+        stomach.userData.URL = "/stomach";
+        let q = stomach.quaternion;
+        console.log(q)
+        const r = rotationQuaternion(180, [0, 0, 1]);
+        q.multiply(r);
+
+        stomach.quaternion.w = q.w
+        stomach.quaternion.x = q.x
+        stomach.quaternion.y = q.y
+        stomach.quaternion.z = q.z
+
+        const scale = 2;
+        stomach.scale.x = 1 * scale;
+        stomach.scale.y = 1 * scale;
+        stomach.scale.z = 1 * scale;
+
+
+        stomach.translateX(-0.3);
+        stomach.translateY(0.5);
+        stomach.translateZ(2.6);
+
+        scene.add(stomach);
+    });
     // interaction
     controls = new OrbitControls( camera, renderer.domElement );
   
@@ -201,3 +225,22 @@ function animate() {
     renderer.render( scene, camera );
 
 };
+
+//auto resizing
+window.addEventListener('resize', function () {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function rotationQuaternion (angle, axis) {
+    const t = (angle * Math.PI) / 180
+
+    const x = Math.sin(t / 2) * axis[0];
+    const y = Math.sin(t / 2) * axis[1];
+    const z = Math.sin(t / 2) * axis[2];
+    const w = Math.cos(t / 2);
+
+    return new THREE.Quaternion(x, y, z, w);
+}
+

@@ -1,0 +1,19 @@
+html, body {
+    background-color: #000000;
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden !important;
+}
+
+h1 {
+    font-size: 48pt;
+    color: white;
+    background-color: transparent;
+    position: absolute;
+    z-index: 99;
+    display: block;
+    font-style: sans-serif;
+    margin-top: 0px;
+}

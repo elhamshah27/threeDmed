@@ -159,7 +159,7 @@ window.onload = async function() {
     url = 'models/fullbrain.glb'
     gltfLoader.load(url, (gltf) => {
         brain = gltf.scene.children[0];
-        brain.userData.URL = "/brain";
+        brain.userData.URL = "./brain/";
 
         const q = rotationQuaternion(90, [0, 1, 0]);
         brain.quaternion.w = q.w
@@ -186,7 +186,7 @@ window.onload = async function() {
     gltfLoader.load(url, (gltf) => {
         stomach = gltf.scene.children[0];
         console.log(stomach);
-        stomach.userData.URL = "/stomach";
+        stomach.userData.URL = "./stomach/";
         let q = stomach.quaternion;
         console.log(q)
         const r = rotationQuaternion(180, [0, 0, 1]);

@@ -1,217 +1,373 @@
 <html>
-  <head>
-    <style>
-      html, body {
-        background-color: #2a1a0a;
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden !important;
+
+<head>
+  <style>
+    html,
+    body {
+      background-color: #2a1a0a;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden !important;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      z-index: 1000;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .back-button:hover {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.9));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .info-panel {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 320px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      z-index: 1000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    .info-panel h3 {
+      margin-top: 0;
+      color: #ffcccc;
+      font-size: 18px;
+      border-bottom: 2px solid rgba(255, 204, 204, 0.3);
+      padding-bottom: 10px;
+    }
+
+    .info-panel p {
+      margin: 10px 0;
+    }
+
+    .info-panel strong {
+      color: #ffaa44;
+    }
+
+    .tooltip {
+      position: absolute;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 10, 5, 0.95));
+      color: white;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      z-index: 2000;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      max-width: 300px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(10px);
+    }
+
+    .tooltip.visible {
+      opacity: 1;
+    }
+
+    .tooltip h4 {
+      margin: 0 0 8px 0;
+      color: #ffcccc;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .tooltip p {
+      margin: 4px 0;
+      color: #e0e0e0;
+    }
+
+    .game-panel {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      max-width: 300px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      z-index: 1000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    .game-panel h3 {
+      margin-top: 0;
+      color: #ffaa44;
+      font-size: 18px;
+      border-bottom: 2px solid rgba(255, 170, 68, 0.3);
+      padding-bottom: 10px;
+    }
+
+    .game-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 5px;
+    }
+
+    .stat-label {
+      font-weight: 600;
+      color: #ffcccc;
+    }
+
+    .stat-item span:last-child {
+      color: #ffaa44;
+      font-weight: 700;
+      font-size: 16px;
+    }
+
+    .game-instruction {
+      margin: 10px 0;
+      padding: 10px;
+      background: rgba(255, 170, 68, 0.2);
+      border-left: 3px solid #ffaa44;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    #game-status {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      font-weight: 600;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    #game-status.success {
+      background: rgba(0, 255, 0, 0.2);
+      color: #90ee90;
+    }
+
+    #game-status.game-over {
+      background: rgba(255, 0, 0, 0.2);
+      color: #ffaaaa;
+    }
+
+    .play-game-button {
+      margin-top: 15px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #ffaa44, #ff8844);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .play-game-button:hover {
+      background: linear-gradient(135deg, #ffbb55, #ff9955);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .game-view {
+      display: none;
+    }
+
+    .game-view.active {
+      display: block;
+    }
+
+    .stomach-view.hidden {
+      display: none;
+    }
+
+    .game-controls-info {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 13px;
+      z-index: 1000;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .game-controls-info h4 {
+      margin: 0 0 8px 0;
+      color: #ffaa44;
+    }
+
+    .game-controls-info p {
+      margin: 4px 0;
+    }
+
+    /* Start and End Screen Overlays */
+    .game-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .game-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .overlay-content {
+      background: linear-gradient(135deg, rgba(30, 20, 10, 0.95), rgba(50, 30, 15, 0.95));
+      padding: 40px 60px;
+      border-radius: 20px;
+      text-align: center;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: white;
+      border: 2px solid rgba(255, 170, 68, 0.5);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+      max-width: 500px;
+    }
+
+    .overlay-content h1 {
+      color: #ffaa44;
+      font-size: 36px;
+      margin: 0 0 20px 0;
+      text-shadow: 0 2px 10px rgba(255, 170, 68, 0.5);
+    }
+
+    .overlay-content h2 {
+      color: #ffcccc;
+      font-size: 28px;
+      margin: 0 0 15px 0;
+    }
+
+    .overlay-content p {
+      font-size: 16px;
+      line-height: 1.6;
+      margin: 10px 0;
+      color: #e0e0e0;
+    }
+
+    .overlay-content .highlight {
+      color: #ffaa44;
+      font-weight: bold;
+    }
+
+    .overlay-content .controls-list {
+      text-align: left;
+      margin: 20px auto;
+      max-width: 280px;
+    }
+
+    .overlay-content .controls-list p {
+      margin: 8px 0;
+    }
+
+    .overlay-button {
+      margin-top: 25px;
+      padding: 15px 40px;
+      background: linear-gradient(135deg, #ffaa44, #ff8844);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 20px rgba(255, 136, 68, 0.4);
+    }
+
+    .overlay-button:hover {
+      background: linear-gradient(135deg, #ffbb55, #ff9955);
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 10px 30px rgba(255, 136, 68, 0.5);
+    }
+
+    .countdown-number {
+      font-size: 120px;
+      font-weight: bold;
+      color: #ffaa44;
+      text-shadow: 0 0 30px rgba(255, 170, 68, 0.8);
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        transform: scale(1);
       }
-      .back-button {
-        position: absolute;
-        top: 20px;
-        left: 20px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 16px;
-        font-weight: 600;
-        color: #333;
-        z-index: 1000;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+      50% {
+        transform: scale(1.1);
       }
-      .back-button:hover {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.9));
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-      }
-      .info-panel {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 320px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-        z-index: 1000;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(10px);
-      }
-      .info-panel h3 {
-        margin-top: 0;
-        color: #ffcccc;
-        font-size: 18px;
-        border-bottom: 2px solid rgba(255, 204, 204, 0.3);
-        padding-bottom: 10px;
-      }
-      .info-panel p {
-        margin: 10px 0;
-      }
-      .info-panel strong {
-        color: #ffaa44;
-      }
-      .tooltip {
-        position: absolute;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.95), rgba(20, 10, 5, 0.95));
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 14px;
-        line-height: 1.5;
-        z-index: 2000;
-        pointer-events: none;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        max-width: 300px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(10px);
-      }
-      .tooltip.visible {
-        opacity: 1;
-      }
-      .tooltip h4 {
-        margin: 0 0 8px 0;
-        color: #ffcccc;
-        font-size: 16px;
-        font-weight: 600;
-      }
-      .tooltip p {
-        margin: 4px 0;
-        color: #e0e0e0;
-      }
-      .game-panel {
-        position: absolute;
-        bottom: 20px;
-        left: 20px;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
-        color: white;
-        padding: 20px;
-        border-radius: 10px;
-        max-width: 300px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 14px;
-        line-height: 1.6;
-        z-index: 1000;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-        backdrop-filter: blur(10px);
-      }
-      .game-panel h3 {
-        margin-top: 0;
-        color: #ffaa44;
-        font-size: 18px;
-        border-bottom: 2px solid rgba(255, 170, 68, 0.3);
-        padding-bottom: 10px;
-      }
-      .game-stats {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        margin: 15px 0;
-      }
-      .stat-item {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px;
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 5px;
-      }
-      .stat-label {
-        font-weight: 600;
-        color: #ffcccc;
-      }
-      .stat-item span:last-child {
-        color: #ffaa44;
-        font-weight: 700;
-        font-size: 16px;
-      }
-      .game-instruction {
-        margin: 10px 0;
-        padding: 10px;
-        background: rgba(255, 170, 68, 0.2);
-        border-left: 3px solid #ffaa44;
-        border-radius: 3px;
-        font-size: 13px;
-      }
-      #game-status {
-        margin-top: 10px;
-        padding: 10px;
-        border-radius: 5px;
-        font-weight: 600;
-        text-align: center;
-        min-height: 20px;
-      }
-      #game-status.success {
-        background: rgba(0, 255, 0, 0.2);
-        color: #90ee90;
-      }
-      #game-status.game-over {
-        background: rgba(255, 0, 0, 0.2);
-        color: #ffaaaa;
-      }
-      .play-game-button {
-        margin-top: 15px;
-        padding: 12px 24px;
-        background: linear-gradient(135deg, #ffaa44, #ff8844);
-        border: none;
-        border-radius: 8px;
-        color: white;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        width: 100%;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      }
-      .play-game-button:hover {
-        background: linear-gradient(135deg, #ffbb55, #ff9955);
-        transform: translateY(-2px);
-        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-      }
-      .game-view {
-        display: none;
-      }
-      .game-view.active {
-        display: block;
-      }
-      .stomach-view.hidden {
-        display: none;
-      }
-      .game-controls-info {
-        position: absolute;
-        top: 20px;
-        right: 20px;
-        background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
-        color: white;
-        padding: 15px;
-        border-radius: 10px;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        font-size: 13px;
-        z-index: 1000;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
-      }
-      .game-controls-info h4 {
-        margin: 0 0 8px 0;
-        color: #ffaa44;
-      }
-      .game-controls-info p {
-        margin: 4px 0;
-      }
-    </style>
-    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
-    <script type="importmap">
+    }
+
+    .result-icon {
+      font-size: 80px;
+      margin-bottom: 10px;
+    }
+
+    .final-stats {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+
+    .final-stats p {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+  </style>
+  <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+  <script type="importmap">
     {
       "imports": {
         "three": "https://unpkg.com/three@latest/build/three.module.js",
@@ -220,46 +376,95 @@
       }
     }
     </script>
-    <script type="module" src="./script.js"></script>
-  </head>
-  <body>
-    <button class="back-button" onclick="window.location.href='/..'">← Back to Homepage</button>
-    <div class="stomach-view" id="stomach-view">
-      <div class="info-panel">
-        <h3 style="margin-top: 0;">Stomach Interior</h3>
-        <p>This is a 3D visualization of the stomach's interior. The stomach is a muscular organ that breaks down food through mechanical and chemical digestion.</p>
-        <p><strong>Controls:</strong> Click and drag to rotate, scroll to zoom</p>
-        <p><strong>Hover</strong> over objects to learn more about them!</p>
-        <button class="play-game-button" onclick="startGame()">🎮 Play Game</button>
-      </div>
-      <div id="tooltip" class="tooltip"></div>
-    </div>
-    
-    <div class="game-view" id="game-view">
-      <div class="game-controls-info">
-        <h4>Game Controls</h4>
-        <p><strong>W</strong> - Accelerate forward</p>
-        <p><strong>S</strong> - Brake/Reverse</p>
-        <p><strong>A</strong> - Turn left</p>
-        <p><strong>D</strong> - Turn right</p>
-        <p>Consume food particles to score!</p>
-      </div>
-      <div class="game-panel">
-        <h3>Digestion Game</h3>
-        <div class="game-stats">
-          <div class="stat-item">
-            <span class="stat-label">Score:</span>
-            <span id="game-score">0</span>
-          </div>
-          <div class="stat-item">
-            <span class="stat-label">Consumed:</span>
-            <span id="game-consumed">0</span> / <span id="game-total">0</span>
-          </div>
-        </div>
-        <div id="game-status"></div>
-        <button class="play-game-button" onclick="exitGame()" style="margin-top: 10px; background: linear-gradient(135deg, #666, #444);">Exit Game</button>
-      </div>
-    </div>
-  </body>
-</html>
+  <script type="module" src="./script.js"></script>
+</head>
 
+<body>
+  <button class="back-button" onclick="window.location.href='/..'">← Back to Homepage</button>
+  <div class="stomach-view" id="stomach-view">
+    <div class="info-panel">
+      <h3 style="margin-top: 0;">Stomach Interior</h3>
+      <p>This is a 3D visualization of the stomach's interior. The stomach is a muscular organ that breaks down food
+        through mechanical and chemical digestion.</p>
+      <p><strong>Controls:</strong> Click and drag to rotate, scroll to zoom</p>
+      <p><strong>Hover</strong> over objects to learn more about them!</p>
+      <button class="play-game-button" onclick="startGame()">🎮 Play Game</button>
+    </div>
+    <div id="tooltip" class="tooltip"></div>
+  </div>
+
+  <div class="game-view" id="game-view">
+    <div class="game-controls-info">
+      <h4>Game Controls</h4>
+      <p><strong>W</strong> - Accelerate forward</p>
+      <p><strong>S</strong> - Brake/Reverse</p>
+      <p><strong>A</strong> - Turn left</p>
+      <p><strong>D</strong> - Turn right</p>
+      <p><strong>Space</strong> - Float up</p>
+      <p><strong>Ctrl</strong> - Dive down</p>
+      <p>Collect all 30 particles in 60 seconds!</p>
+    </div>
+    <div class="game-panel">
+      <h3>Digestion Game</h3>
+      <div class="game-stats">
+        <div class="stat-item">
+          <span class="stat-label">Time:</span>
+          <span id="game-timer">1:00</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Score:</span>
+          <span id="game-score">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Digested:</span>
+          <span id="game-consumed">0</span> / <span id="game-total">30</span>
+        </div>
+      </div>
+      <div id="game-status"></div>
+      <button class="play-game-button" onclick="exitGame()"
+        style="margin-top: 10px; background: linear-gradient(135deg, #666, #444);">Exit Game</button>
+    </div>
+  </div>
+
+  <!-- Start Screen Overlay -->
+  <div class="game-overlay" id="start-screen">
+    <div class="overlay-content">
+      <h1>🧬 Digestion Game</h1>
+      <p>You are an <span class="highlight">enzyme</span> inside the stomach!</p>
+      <p>Your mission: <span class="highlight">Digest 30 food particles</span> before time runs out.</p>
+      <div class="controls-list">
+        <p><strong>W/S</strong> - Move forward/backward</p>
+        <p><strong>A/D</strong> - Turn left/right</p>
+        <p><strong>Space</strong> - Float up</p>
+        <p><strong>Ctrl</strong> - Dive down</p>
+      </div>
+      <p>⏱️ You have <span class="highlight">60 seconds</span>!</p>
+      <button class="overlay-button" onclick="beginGame()">🎮 Start Game</button>
+    </div>
+  </div>
+
+  <!-- Countdown Overlay -->
+  <div class="game-overlay" id="countdown-screen">
+    <div class="overlay-content">
+      <div class="countdown-number" id="countdown-number">3</div>
+    </div>
+  </div>
+
+  <!-- End Screen Overlay -->
+  <div class="game-overlay" id="end-screen">
+    <div class="overlay-content">
+      <div class="result-icon" id="result-icon">🎉</div>
+      <h2 id="result-title">Victory!</h2>
+      <div class="final-stats">
+        <p>Score: <span class="highlight" id="final-score">0</span></p>
+        <p>Particles Digested: <span class="highlight" id="final-digested">0</span> / 30</p>
+        <p>Time Remaining: <span class="highlight" id="final-time">0:00</span></p>
+      </div>
+      <button class="overlay-button" onclick="restartGame()">🔄 Play Again</button>
+      <button class="overlay-button" onclick="exitToStomach()"
+        style="background: linear-gradient(135deg, #666, #444); margin-left: 10px;">Exit</button>
+    </div>
+  </div>
+</body>
+
+</html>

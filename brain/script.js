@@ -45,7 +45,7 @@ loader.load(
     console.log('Brain model loaded!', gltf);
 
     brain = gltf.scene;
-    brain.userData.URL = "/skybox-brain";
+    brain.userData.URL = "/threeDmed/skybox-brain/";
     scene.add(brain);
 
     brain.traverse((child) => {

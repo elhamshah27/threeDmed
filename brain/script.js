@@ -104,9 +104,9 @@ loader.load(
     // const helper = new THREE.Box3Helper(box, 0xffff00);
     // scene.add(helper);
 
-    // Move camera to see the whole box
+    // Move camera to see the whole box (zoomed in closer)
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const dist = maxDim * 2.5;
+    const dist = maxDim * 1.0;  // Zoomed in closer
     camera.position.copy(center.clone().add(new THREE.Vector3(dist, dist, dist)));
     camera.lookAt(center);
     controls.target.copy(center);

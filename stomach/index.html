@@ -90,6 +90,125 @@
         margin: 4px 0;
         color: #e0e0e0;
       }
+      .game-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        max-width: 300px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 14px;
+        line-height: 1.6;
+        z-index: 1000;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+      }
+      .game-panel h3 {
+        margin-top: 0;
+        color: #ffaa44;
+        font-size: 18px;
+        border-bottom: 2px solid rgba(255, 170, 68, 0.3);
+        padding-bottom: 10px;
+      }
+      .game-stats {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 15px 0;
+      }
+      .stat-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+      }
+      .stat-label {
+        font-weight: 600;
+        color: #ffcccc;
+      }
+      .stat-item span:last-child {
+        color: #ffaa44;
+        font-weight: 700;
+        font-size: 16px;
+      }
+      .game-instruction {
+        margin: 10px 0;
+        padding: 10px;
+        background: rgba(255, 170, 68, 0.2);
+        border-left: 3px solid #ffaa44;
+        border-radius: 3px;
+        font-size: 13px;
+      }
+      #game-status {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: 600;
+        text-align: center;
+        min-height: 20px;
+      }
+      #game-status.success {
+        background: rgba(0, 255, 0, 0.2);
+        color: #90ee90;
+      }
+      #game-status.game-over {
+        background: rgba(255, 0, 0, 0.2);
+        color: #ffaaaa;
+      }
+      .play-game-button {
+        margin-top: 15px;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #ffaa44, #ff8844);
+        border: none;
+        border-radius: 8px;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+      }
+      .play-game-button:hover {
+        background: linear-gradient(135deg, #ffbb55, #ff9955);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+      }
+      .game-view {
+        display: none;
+      }
+      .game-view.active {
+        display: block;
+      }
+      .stomach-view.hidden {
+        display: none;
+      }
+      .game-controls-info {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(20, 10, 5, 0.85));
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 13px;
+        z-index: 1000;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+      }
+      .game-controls-info h4 {
+        margin: 0 0 8px 0;
+        color: #ffaa44;
+      }
+      .game-controls-info p {
+        margin: 4px 0;
+      }
     </style>
     <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
     <script type="importmap">
@@ -105,13 +224,42 @@
   </head>
   <body>
     <button class="back-button" onclick="window.location.href='/..'">← Back to Homepage</button>
-    <div class="info-panel">
-      <h3 style="margin-top: 0;">Stomach Interior</h3>
-      <p>This is a 3D visualization of the stomach's interior. The stomach is a muscular organ that breaks down food through mechanical and chemical digestion.</p>
-      <p><strong>Controls:</strong> Click and drag to rotate, scroll to zoom</p>
-      <p><strong>Hover</strong> over objects to learn more about them!</p>
+    <div class="stomach-view" id="stomach-view">
+      <div class="info-panel">
+        <h3 style="margin-top: 0;">Stomach Interior</h3>
+        <p>This is a 3D visualization of the stomach's interior. The stomach is a muscular organ that breaks down food through mechanical and chemical digestion.</p>
+        <p><strong>Controls:</strong> Click and drag to rotate, scroll to zoom</p>
+        <p><strong>Hover</strong> over objects to learn more about them!</p>
+        <button class="play-game-button" onclick="startGame()">🎮 Play Game</button>
+      </div>
+      <div id="tooltip" class="tooltip"></div>
     </div>
-    <div id="tooltip" class="tooltip"></div>
+    
+    <div class="game-view" id="game-view">
+      <div class="game-controls-info">
+        <h4>Game Controls</h4>
+        <p><strong>W</strong> - Accelerate forward</p>
+        <p><strong>S</strong> - Brake/Reverse</p>
+        <p><strong>A</strong> - Turn left</p>
+        <p><strong>D</strong> - Turn right</p>
+        <p>Consume food particles to score!</p>
+      </div>
+      <div class="game-panel">
+        <h3>Digestion Game</h3>
+        <div class="game-stats">
+          <div class="stat-item">
+            <span class="stat-label">Score:</span>
+            <span id="game-score">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Consumed:</span>
+            <span id="game-consumed">0</span> / <span id="game-total">0</span>
+          </div>
+        </div>
+        <div id="game-status"></div>
+        <button class="play-game-button" onclick="exitGame()" style="margin-top: 10px; background: linear-gradient(135deg, #666, #444);">Exit Game</button>
+      </div>
+    </div>
   </body>
 </html>
 

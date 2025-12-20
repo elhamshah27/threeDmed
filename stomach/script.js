@@ -10,17 +10,53 @@ var mouse = new THREE.Vector2();
 var hoveredObject = null;
 var tooltip = null;
 
+// Game variables
+var gameScore = 0;
+var digestedCount = 0;
+var totalParticles = 0;
+var gameActive = false;
+var isGameMode = false;
+
+// Game mode variables
+var enzyme = null;
+var gameCamera = null;
+var gameScene = null;
+var gameRenderer = null;
+var gameControls = null;
+var keys = {};
+var velocity = new THREE.Vector3();
+var direction = new THREE.Vector3();
+var gameParticles = [];
+var gameBubbleGroup = null;
+var gameGastricFluid = null;
+var gameRugaeGroup = null;
+var gameStomachGroup = null;
+var gameLight = null;
+
+// Animation variables
+var enzymeAnimationTime = 0;
+var enzymeIdleOffset = new THREE.Vector3(0, 0, 0);
+var enzymeWingRotation = 0;
+var enzymeIdleInitialized = false;
+
+// Audio variables
+var audioContext = null;
+var movementSound = null;
+var consumptionSound = null;
+var backgroundSound = null;
+var movementGain = null;
+
 window.onload = async function() {
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x1a0f05);
 
-    // setup the camera
+    // setup the camera - positioned inside the stomach
     const fov = 75;
     const ratio = window.innerWidth / window.innerHeight;
     const zNear = 0.1;
     const zFar = 1000;
     camera = new THREE.PerspectiveCamera( fov, ratio, zNear, zFar );
-    camera.position.set(0, 0, 15);
+    camera.position.set(0, 0, 0); // Center of stomach (inside)
   
     // create renderer and setup the canvas with enhanced settings
     renderer = new THREE.WebGLRenderer({ 
@@ -76,13 +112,13 @@ window.onload = async function() {
     // Create floating particles (food particles, enzymes)
     createParticles();
 
-    // Interaction controls
+    // Interaction controls - set up for inside view
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
-    controls.maxDistance = 30;
-    controls.target.set(0, 0, 0);
+    controls.minDistance = 0.1; // Can zoom in close
+    controls.maxDistance = 7; // Limited to inside stomach
+    controls.target.set(0, 0, 0); // Look from center
   
     // Handle window resize
     window.addEventListener('resize', onWindowResize, false);
@@ -97,6 +133,723 @@ window.onload = async function() {
     animate();
 };
 
+// Switch to game mode
+window.startGame = function() {
+    isGameMode = true;
+    gameActive = true;
+    
+    // Hide stomach view, show game view
+    const stomachView = document.getElementById('stomach-view');
+    const gameView = document.getElementById('game-view');
+    if (stomachView) stomachView.classList.add('hidden');
+    if (gameView) gameView.classList.add('active');
+    
+    // Initialize game
+    initGame();
+};
+
+// Exit game mode
+window.exitGame = function() {
+    isGameMode = false;
+    gameActive = false;
+    
+    // Stop all sounds
+    stopMovementSound();
+    if (backgroundSound) {
+        try {
+            backgroundSound.stop();
+        } catch (e) {}
+    }
+    
+    // Hide game view, show stomach view
+    const stomachView = document.getElementById('stomach-view');
+    const gameView = document.getElementById('game-view');
+    if (stomachView) stomachView.classList.remove('hidden');
+    if (gameView) gameView.classList.remove('active');
+    
+    // Clean up game resources
+    if (gameRenderer && gameRenderer.domElement && gameRenderer.domElement.parentNode) {
+        gameRenderer.domElement.parentNode.removeChild(gameRenderer.domElement);
+    }
+    
+    // Reset game variables
+    gameScore = 0;
+    digestedCount = 0;
+    enzymeAnimationTime = 0;
+    enzymeIdleInitialized = false;
+    enzymeIdleOffset.set(0, 0, 0);
+};
+
+function initAudio() {
+    try {
+        // Initialize Web Audio API
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Create movement sound (continuous low hum)
+        movementGain = audioContext.createGain();
+        movementGain.gain.value = 0;
+        movementGain.connect(audioContext.destination);
+        
+        // Create oscillator for movement sound
+        movementSound = audioContext.createOscillator();
+        movementSound.type = 'sawtooth';
+        movementSound.frequency.value = 120;
+        movementSound.connect(movementGain);
+        movementSound.start();
+        
+        // Create background ambient sound
+        const ambientGain = audioContext.createGain();
+        ambientGain.gain.value = 0.1;
+        ambientGain.connect(audioContext.destination);
+        
+        backgroundSound = audioContext.createOscillator();
+        backgroundSound.type = 'sine';
+        backgroundSound.frequency.value = 60;
+        backgroundSound.connect(ambientGain);
+        backgroundSound.start();
+        
+    } catch (e) {
+        console.warn('Audio initialization failed:', e);
+    }
+}
+
+function startMovementSound() {
+    if (movementGain) {
+        movementGain.gain.setTargetAtTime(0.15, audioContext.currentTime, 0.1);
+    }
+}
+
+function stopMovementSound() {
+    if (movementGain) {
+        movementGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.1);
+    }
+}
+
+function playConsumptionSound() {
+    if (!audioContext) return;
+    
+    try {
+        // Create a short "pop" sound for consumption
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+    } catch (e) {
+        console.warn('Consumption sound failed:', e);
+    }
+}
+
+function initGame() {
+    // Initialize audio
+    initAudio();
+    
+    // Create game scene
+    gameScene = new THREE.Scene();
+    gameScene.background = new THREE.Color(0x1a0f05);
+    
+    // Create game camera (third person)
+    gameCamera = new THREE.PerspectiveCamera(
+        75,
+        window.innerWidth / window.innerHeight,
+        0.1,
+        1000
+    );
+    
+    // Create game renderer
+    gameRenderer = new THREE.WebGLRenderer({ antialias: true });
+    gameRenderer.setSize(window.innerWidth, window.innerHeight);
+    gameRenderer.shadowMap.enabled = true;
+    gameRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.body.appendChild(gameRenderer.domElement);
+    
+    // Add fog
+    gameScene.fog = new THREE.FogExp2(0x1a0f05, 0.02);
+    
+    // Lighting
+    const ambientLight = new THREE.AmbientLight(0xffeedd, 0.4);
+    gameScene.add(ambientLight);
+    
+    gameLight = new THREE.PointLight(0xffaa44, 2.5, 50, 2);
+    gameLight.position.set(5, 5, 5);
+    gameLight.castShadow = true;
+    gameScene.add(gameLight);
+    
+    const pointLight2 = new THREE.PointLight(0x44aaff, 1.5, 50, 2);
+    pointLight2.position.set(-5, -5, 5);
+    gameScene.add(pointLight2);
+    
+    // Create stomach environment for game
+    createGameEnvironment();
+    
+    // Create enzyme player
+    createEnzyme();
+    
+    // Create food particles
+    createGameParticles();
+    
+    // Setup controls
+    setupGameControls();
+    
+    // Setup keyboard input
+    setupKeyboardInput();
+    
+    // Initialize UI
+    updateGameUI();
+    
+    // Start game loop
+    animateGame();
+}
+
+function createGameEnvironment() {
+    gameStomachGroup = new THREE.Group();
+    
+    // Inner lining (what you see from inside)
+    const innerGeometry = new THREE.SphereGeometry(7.5, 64, 48);
+    innerGeometry.scale(1, 1.3, 0.9);
+    const texture = createStomachTexture(512, 512);
+    const normalTexture = createNormalTexture(512, 512);
+    
+    const innerMaterial = new THREE.MeshStandardMaterial({
+        color: 0xff8888,
+        transparent: true,
+        opacity: 0.9,
+        side: THREE.DoubleSide,
+        roughness: 0.6,
+        metalness: 0.05,
+        map: texture,
+        normalMap: normalTexture,
+        normalScale: new THREE.Vector2(0.8, 0.8),
+        emissive: 0x441111,
+        emissiveIntensity: 0.2
+    });
+    
+    const innerWall = new THREE.Mesh(innerGeometry, innerMaterial);
+    innerWall.receiveShadow = true;
+    gameStomachGroup.add(innerWall);
+    
+    // Rugae (folds)
+    gameRugaeGroup = new THREE.Group();
+    for (let i = 0; i < 40; i++) {
+        const height = 1.5 + Math.random() * 1.5;
+        const width = 0.15 + Math.random() * 0.15;
+        const rugaeGeometry = new THREE.BoxGeometry(width, height, 0.15);
+        const rugaeMaterial = new THREE.MeshStandardMaterial({
+            color: 0xff6666,
+            transparent: true,
+            opacity: 0.85,
+            roughness: 0.5
+        });
+        const rugae = new THREE.Mesh(rugaeGeometry, rugaeMaterial);
+        rugae.castShadow = true;
+        
+        const angle = (i / 40) * Math.PI * 2;
+        const radius = 7.3 + (Math.random() - 0.5) * 0.3;
+        rugae.position.set(
+            Math.cos(angle) * radius * 0.8,
+            (Math.random() - 0.5) * 4,
+            Math.sin(angle) * radius * 0.6
+        );
+        rugae.rotation.y = angle;
+        gameRugaeGroup.add(rugae);
+    }
+    gameStomachGroup.add(gameRugaeGroup);
+    
+    // Gastric fluid (simplified)
+    gameGastricFluid = createGameGastricFluid();
+    gameStomachGroup.add(gameGastricFluid);
+    
+    gameScene.add(gameStomachGroup);
+}
+
+function createGameGastricFluid() {
+    const fluidGroup = new THREE.Group();
+    const cupRadius = 7.0;
+    const cupHeight = 3.5;
+    const cupBottomY = -5.5;
+    const a = cupRadius;
+    const c = cupRadius * 0.9;
+    
+    const liquidGeometry = new THREE.CylinderGeometry(
+        Math.max(a, c),
+        Math.max(a, c),
+        cupHeight,
+        64
+    );
+    liquidGeometry.scale(1, 1, c / a);
+    
+    const fluidMaterial = new THREE.MeshStandardMaterial({
+        color: 0xccaa44,
+        transparent: true,
+        opacity: 0.7,
+        roughness: 0.1,
+        metalness: 0.3,
+        side: THREE.DoubleSide
+    });
+    
+    const fluidBody = new THREE.Mesh(liquidGeometry, fluidMaterial);
+    fluidBody.position.y = cupBottomY + cupHeight / 2;
+    fluidGroup.add(fluidBody);
+    
+    // Bubbles
+    gameBubbleGroup = new THREE.Group();
+    for (let i = 0; i < 30; i++) {
+        const size = 0.08 + Math.random() * 0.15;
+        const bubbleGeometry = new THREE.SphereGeometry(size, 16, 16);
+        const bubbleMaterial = new THREE.MeshStandardMaterial({
+            color: 0xffffaa,
+            transparent: true,
+            opacity: 0.6 + Math.random() * 0.3,
+            roughness: 0.1,
+            metalness: 0.8
+        });
+        const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+        const waterLevelY = -5.5 + 3.5;
+        bubble.position.set(
+            (Math.random() - 0.5) * 12,
+            waterLevelY + Math.random() * 0.5,
+            (Math.random() - 0.5) * 10
+        );
+        gameBubbleGroup.add(bubble);
+    }
+    fluidGroup.add(gameBubbleGroup);
+    
+    return fluidGroup;
+}
+
+function createEnzyme() {
+    // Create enzyme as a ship-like vehicle with UNIQUE BRIGHT CYAN COLOR
+    const enzymeGroup = new THREE.Group();
+    
+    // Main body (elongated shape - use scaled sphere for simplicity)
+    const bodyGeometry = new THREE.SphereGeometry(0.35, 16, 16);
+    bodyGeometry.scale(1, 1, 1.6); // Stretch to make it more ship-like
+    const enzymeMaterial = new THREE.MeshStandardMaterial({
+        color: 0x00ffff, // BRIGHT CYAN - unique color
+        emissive: 0x00aaff,
+        emissiveIntensity: 0.8, // High emissive for glow
+        roughness: 0.2,
+        metalness: 0.9
+    });
+    
+    const body = new THREE.Mesh(bodyGeometry, enzymeMaterial);
+    body.castShadow = true;
+    body.receiveShadow = true;
+    enzymeGroup.add(body);
+    
+    // Add some detail - animated "wings" or appendages
+    const wingGeometry = new THREE.BoxGeometry(0.18, 0.35, 0.06);
+    const wingMaterial = new THREE.MeshStandardMaterial({
+        color: 0x00ddff,
+        emissive: 0x0088ff,
+        emissiveIntensity: 0.6,
+        roughness: 0.2,
+        metalness: 0.9
+    });
+    
+    const wing1 = new THREE.Mesh(wingGeometry, wingMaterial);
+    wing1.position.set(0.4, 0, 0);
+    wing1.userData.isWing = true;
+    wing1.userData.wingSide = 1;
+    enzymeGroup.add(wing1);
+    
+    const wing2 = new THREE.Mesh(wingGeometry, wingMaterial);
+    wing2.position.set(-0.4, 0, 0);
+    wing2.userData.isWing = true;
+    wing2.userData.wingSide = -1;
+    enzymeGroup.add(wing2);
+    
+    // Add a glowing "nose" or front indicator
+    const noseGeometry = new THREE.ConeGeometry(0.18, 0.45, 8);
+    const noseMaterial = new THREE.MeshStandardMaterial({
+        color: 0x88ffff,
+        emissive: 0x44ffff,
+        emissiveIntensity: 1.0, // Very bright
+        roughness: 0.1,
+        metalness: 0.95
+    });
+    const nose = new THREE.Mesh(noseGeometry, noseMaterial);
+    nose.position.set(0, 0, -0.6); // At the front
+    nose.rotation.x = Math.PI; // Point forward
+    enzymeGroup.add(nose);
+    
+    // Add a point light to the enzyme for glow effect
+    const enzymeLight = new THREE.PointLight(0x00ffff, 1.5, 10, 2);
+    enzymeLight.position.set(0, 0, 0);
+    enzymeGroup.add(enzymeLight);
+    enzymeGroup.userData.light = enzymeLight;
+    
+    enzyme = enzymeGroup;
+    enzyme.position.set(0, 0, 0); // Start at center
+    enzyme.castShadow = true;
+    enzyme.userData.speed = 0.25; // Movement speed
+    enzyme.userData.turnSpeed = 0.06; // Rotation speed
+    enzyme.userData.rotationY = 0; // Current rotation angle
+    enzyme.userData.velocity = new THREE.Vector3(0, 0, 0); // Current velocity
+    enzyme.userData.isMoving = false;
+    enzyme.userData.wings = [wing1, wing2];
+    
+    gameScene.add(enzyme);
+    
+    // Position camera behind enzyme (chase camera)
+    updateCameraPosition();
+}
+
+function createGameParticles() {
+    gameParticles = [];
+    const particleCount = 50; // Fewer particles for better performance
+    
+    const foodColors = [
+        new THREE.Color(0x8B4513),
+        new THREE.Color(0xA0522D),
+        new THREE.Color(0xCD853F),
+        new THREE.Color(0xD2691E),
+    ];
+    
+    for (let i = 0; i < particleCount; i++) {
+        const size = 0.2 + Math.random() * 0.3;
+        const geometry = new THREE.SphereGeometry(size, 8, 8);
+        const color = foodColors[Math.floor(Math.random() * foodColors.length)];
+        const material = new THREE.MeshStandardMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.9,
+            roughness: 0.7,
+            metalness: 0.1
+        });
+        
+        const particle = new THREE.Mesh(geometry, material);
+        particle.position.set(
+            (Math.random() - 0.5) * 10,
+            (Math.random() - 0.5) * 6,
+            (Math.random() - 0.5) * 10
+        );
+        particle.castShadow = true;
+        particle.userData.isConsumed = false;
+        particle.userData.points = Math.floor(Math.random() * 10) + 5;
+        
+        gameParticles.push(particle);
+        gameScene.add(particle);
+    }
+    
+    totalParticles = particleCount;
+    updateGameUI();
+}
+
+function setupGameControls() {
+    // Disable orbit controls - camera is controlled programmatically
+    gameControls = null;
+    // Camera is controlled by updateCameraPosition() for smooth chase camera
+}
+
+function setupKeyboardInput() {
+    document.addEventListener('keydown', (event) => {
+        if (!isGameMode) return;
+        keys[event.key.toLowerCase()] = true;
+    });
+    
+    document.addEventListener('keyup', (event) => {
+        if (!isGameMode) return;
+        keys[event.key.toLowerCase()] = false;
+    });
+}
+
+function updateCameraPosition() {
+    if (!enzyme || !gameCamera) return;
+    
+    // Improved third-person chase camera - smooth following
+    const cameraDistance = 6;
+    const cameraHeight = 3;
+    const cameraLookAhead = 2; // Look slightly ahead of enzyme
+    
+    // Calculate camera position behind enzyme (in direction opposite to forward)
+    const backward = new THREE.Vector3(0, 0, 1);
+    backward.applyAxisAngle(new THREE.Vector3(0, 1, 0), enzyme.userData.rotationY);
+    
+    // Ideal camera position
+    const idealCameraPos = enzyme.position.clone();
+    idealCameraPos.add(backward.multiplyScalar(cameraDistance));
+    idealCameraPos.y += cameraHeight;
+    
+    // Smooth camera follow (lerp for smoothness)
+    gameCamera.position.lerp(idealCameraPos, 0.15);
+    
+    // Look ahead of enzyme (where it's going)
+    const lookAheadPos = enzyme.position.clone();
+    const forward = new THREE.Vector3(0, 0, -1);
+    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), enzyme.userData.rotationY);
+    lookAheadPos.add(forward.multiplyScalar(cameraLookAhead));
+    lookAheadPos.y += 0.5;
+    
+    // Smooth look-at
+    const currentLookAt = new THREE.Vector3();
+    gameCamera.getWorldDirection(currentLookAt);
+    currentLookAt.multiplyScalar(10).add(gameCamera.position);
+    
+    const targetLookAt = lookAheadPos.clone();
+    currentLookAt.lerp(targetLookAt, 0.2);
+    gameCamera.lookAt(currentLookAt);
+}
+
+function updateEnzymeMovement() {
+    if (!enzyme) return;
+    
+    // Vehicle-like controls: A/D turn, W/S accelerate forward/backward
+    const turnSpeed = enzyme.userData.turnSpeed;
+    const speed = enzyme.userData.speed;
+    const wasMoving = enzyme.userData.isMoving;
+    
+    // Rotate left/right (like turning a car)
+    if (keys['a']) {
+        enzyme.userData.rotationY -= turnSpeed;
+    }
+    if (keys['d']) {
+        enzyme.userData.rotationY += turnSpeed;
+    }
+    
+    // Apply rotation to enzyme
+    enzyme.rotation.y = enzyme.userData.rotationY;
+    
+    // Calculate forward direction based on enzyme's rotation
+    const forward = new THREE.Vector3(0, 0, -1);
+    forward.applyAxisAngle(new THREE.Vector3(0, 1, 0), enzyme.userData.rotationY);
+    
+    // Accelerate forward or backward (like gas/brake)
+    if (keys['w']) {
+        enzyme.userData.velocity.add(forward.multiplyScalar(0.025)); // Accelerate forward
+        enzyme.userData.isMoving = true;
+    } else if (keys['s']) {
+        enzyme.userData.velocity.add(forward.multiplyScalar(-0.015)); // Brake/reverse
+        enzyme.userData.isMoving = true;
+    } else {
+        enzyme.userData.isMoving = false;
+    }
+    
+    // Update movement sound based on movement state
+    if (enzyme.userData.isMoving && !wasMoving) {
+        startMovementSound();
+    } else if (!enzyme.userData.isMoving && wasMoving) {
+        stopMovementSound();
+    }
+    
+    // Apply friction/drag
+    enzyme.userData.velocity.multiplyScalar(0.94);
+    
+    // Limit max speed
+    const maxSpeed = speed;
+    if (enzyme.userData.velocity.length() > maxSpeed) {
+        enzyme.userData.velocity.normalize().multiplyScalar(maxSpeed);
+    }
+    
+    // Update position based on velocity
+    enzyme.position.add(enzyme.userData.velocity);
+    
+    // Keep enzyme within stomach bounds
+    const maxRadius = 6;
+    const distance = Math.sqrt(enzyme.position.x ** 2 + enzyme.position.z ** 2);
+    if (distance > maxRadius) {
+        // Bounce off walls
+        const normal = new THREE.Vector3(-enzyme.position.x / distance, 0, -enzyme.position.z / distance);
+        enzyme.userData.velocity.reflect(normal);
+        enzyme.position.x = (enzyme.position.x / distance) * maxRadius;
+        enzyme.position.z = (enzyme.position.z / distance) * maxRadius;
+    }
+    
+    // Keep Y within reasonable bounds
+    if (enzyme.position.y < -3 || enzyme.position.y > 3) {
+        enzyme.userData.velocity.y *= -0.5; // Bounce with dampening
+        enzyme.position.y = Math.max(-3, Math.min(3, enzyme.position.y));
+    }
+}
+
+function updateEnzymeAnimation() {
+    if (!enzyme) return;
+    
+    enzymeAnimationTime += 0.016; // ~60fps
+    
+    // Calculate idle floating animation (oscillating offset)
+    const floatAmount = 0.15;
+    const floatSpeed = 1.5;
+    const newIdleOffset = new THREE.Vector3(
+        Math.cos(enzymeAnimationTime * floatSpeed * 0.7) * 0.1,
+        Math.sin(enzymeAnimationTime * floatSpeed) * floatAmount,
+        Math.sin(enzymeAnimationTime * floatSpeed * 0.5) * 0.1
+    );
+    
+    // Remove old offset and apply new one (only if already initialized)
+    if (enzymeIdleInitialized) {
+        enzyme.position.sub(enzymeIdleOffset);
+    } else {
+        enzymeIdleInitialized = true;
+    }
+    enzyme.position.add(newIdleOffset);
+    enzymeIdleOffset.copy(newIdleOffset);
+    
+    // Wing flapping animation when moving
+    if (enzyme.userData.isMoving && enzyme.userData.velocity.length() > 0.01) {
+        enzymeWingRotation += 0.3;
+        const wingFlapAmount = Math.sin(enzymeWingRotation) * 0.3;
+        
+        if (enzyme.userData.wings) {
+            enzyme.userData.wings.forEach((wing, index) => {
+                wing.rotation.z = wingFlapAmount * (index === 0 ? 1 : -1);
+            });
+        }
+    } else {
+        // Gentle idle wing movement
+        enzymeWingRotation += 0.1;
+        const idleFlap = Math.sin(enzymeWingRotation) * 0.1;
+        
+        if (enzyme.userData.wings) {
+            enzyme.userData.wings.forEach((wing, index) => {
+                wing.rotation.z = idleFlap * (index === 0 ? 1 : -1);
+            });
+        }
+    }
+    
+    // Pulsing glow effect
+    const glowIntensity = 0.8 + Math.sin(enzymeAnimationTime * 3) * 0.2;
+    if (enzyme.userData.light) {
+        enzyme.userData.light.intensity = 1.5 * glowIntensity;
+    }
+    
+    // Slight tilt when turning
+    if (keys['a'] || keys['d']) {
+        const tiltAmount = (keys['a'] ? 0.2 : 0) + (keys['d'] ? -0.2 : 0);
+        enzyme.rotation.z = THREE.MathUtils.lerp(enzyme.rotation.z, tiltAmount, 0.1);
+    } else {
+        enzyme.rotation.z = THREE.MathUtils.lerp(enzyme.rotation.z, 0, 0.1);
+    }
+}
+
+function checkParticleCollisions() {
+    if (!enzyme) return;
+    
+    const enzymeRadius = 0.4; // Slightly larger collision radius for the enzyme ship
+    const enzymePosition = enzyme.position;
+    
+    gameParticles.forEach((particle, index) => {
+        if (particle.userData.isConsumed) return;
+        
+        const distance = enzymePosition.distanceTo(particle.position);
+        const particleRadius = particle.geometry.parameters.radius || 0.25;
+        const minDistance = enzymeRadius + particleRadius;
+        
+        if (distance < minDistance) {
+            // Consume particle
+            particle.userData.isConsumed = true;
+            gameScore += particle.userData.points;
+            digestedCount++;
+            
+            // Play consumption sound
+            playConsumptionSound();
+            
+            // Enhanced consumption animation with particle effect
+            const startScale = particle.scale.x;
+            const startOpacity = particle.material.opacity;
+            let animationFrame = 0;
+            const maxFrames = 20;
+            
+            const consumeAnimation = () => {
+                animationFrame++;
+                const progress = animationFrame / maxFrames;
+                
+                // Scale down and fade out
+                const scale = THREE.MathUtils.lerp(startScale, 0, progress);
+                particle.scale.setScalar(scale);
+                particle.material.opacity = THREE.MathUtils.lerp(startOpacity, 0, progress);
+                
+                // Add rotation for visual effect
+                particle.rotation.x += 0.1;
+                particle.rotation.y += 0.1;
+                
+                // Add slight upward movement
+                particle.position.y += 0.02;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(consumeAnimation);
+                } else {
+                    particle.visible = false;
+                }
+            };
+            consumeAnimation();
+            
+            // Brief enzyme "pulse" effect on consumption
+            if (enzyme.userData.light) {
+                const originalIntensity = enzyme.userData.light.intensity;
+                enzyme.userData.light.intensity = originalIntensity * 2;
+                setTimeout(() => {
+                    if (enzyme.userData.light) {
+                        enzyme.userData.light.intensity = originalIntensity;
+                    }
+                }, 100);
+            }
+            
+            updateGameUI();
+            
+            // Check if game is complete
+            if (digestedCount >= totalParticles) {
+                gameActive = false;
+                stopMovementSound();
+                const statusElement = document.getElementById('game-status');
+                if (statusElement) {
+                    statusElement.textContent = `🎉 Game Complete! Final Score: ${gameScore}`;
+                    statusElement.className = 'success';
+                }
+            }
+        }
+    });
+}
+
+function updateGameUI() {
+    const scoreElement = document.getElementById('game-score');
+    const consumedElement = document.getElementById('game-consumed');
+    const totalElement = document.getElementById('game-total');
+    
+    if (scoreElement) scoreElement.textContent = gameScore.toString();
+    if (consumedElement) consumedElement.textContent = digestedCount.toString();
+    if (totalElement) totalElement.textContent = totalParticles.toString();
+}
+
+function animateGame() {
+    if (!isGameMode) return;
+    
+    requestAnimationFrame(animateGame);
+    
+    if (gameActive) {
+        updateEnzymeMovement();
+        updateEnzymeAnimation();
+        updateCameraPosition();
+        checkParticleCollisions();
+    } else if (enzyme) {
+        // Still animate enzyme even when game is paused
+        updateEnzymeAnimation();
+    }
+    
+    if (gameRenderer && gameScene && gameCamera) {
+        gameRenderer.render(gameScene, gameCamera);
+    }
+}
+
+// Handle window resize for game
+window.addEventListener('resize', () => {
+    if (gameCamera && gameRenderer) {
+        gameCamera.aspect = window.innerWidth / window.innerHeight;
+        gameCamera.updateProjectionMatrix();
+        gameRenderer.setSize(window.innerWidth, window.innerHeight);
+    }
+});
+
 function createStomachWall() {
     // Create the outer stomach wall with enhanced graphics
     const group = new THREE.Group();
@@ -110,11 +863,11 @@ function createStomachWall() {
     const geometry = new THREE.SphereGeometry(8, 64, 48);
     geometry.scale(1, 1.3, 0.9);
     
-    // Enhanced stomach wall material with better shading
+    // Enhanced stomach wall material - more visible from inside
     const material = new THREE.MeshStandardMaterial({
         color: 0xffcccc,
         transparent: true,
-        opacity: 0.25,
+        opacity: 0.7, // More opaque so you can see it from inside
         side: THREE.DoubleSide,
         roughness: 0.7,
         metalness: 0.1,
@@ -130,15 +883,16 @@ function createStomachWall() {
     stomachWall.userData.type = 'stomachWall';
     stomachWall.userData.name = 'Stomach Wall';
     stomachWall.userData.description = 'The outer muscular wall of the stomach that contracts to mix and churn food.';
+    stomachWall.visible = false; // Hide outer wall when viewing from inside
     group.add(stomachWall);
 
-    // Add inner lining (more opaque, pinkish-red) with better detail
+    // Add inner lining - this is what we see from inside, make it more prominent
     const innerGeometry = new THREE.SphereGeometry(7.5, 64, 48);
     innerGeometry.scale(1, 1.3, 0.9);
     const innerMaterial = new THREE.MeshStandardMaterial({
         color: 0xff8888,
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.9, // More opaque for inside view
         side: THREE.DoubleSide,
         roughness: 0.6,
         metalness: 0.05,
@@ -146,7 +900,7 @@ function createStomachWall() {
         normalMap: normalTexture,
         normalScale: new THREE.Vector2(0.8, 0.8),
         emissive: 0x441111,
-        emissiveIntensity: 0.15
+        emissiveIntensity: 0.2 // Slightly brighter from inside
     });
     const innerWall = new THREE.Mesh(innerGeometry, innerMaterial);
     innerWall.receiveShadow = true;
@@ -360,7 +1114,10 @@ function createGastricFluid() {
     waterSurface.userData.type = 'gastricFluid';
     waterSurface.userData.name = 'Gastric Fluid Surface';
     waterSurface.userData.description = 'The surface of the gastric fluid, which contains digestive enzymes and acid that break down food.';
+    waterSurface.userData.originalGeometry = surfaceGeometry; // Store for replacement
+    waterSurface.userData.originalPosition = waterLevelY;
     fluidGroup.add(waterSurface);
+    console.log('  Added to fluidGroup, fluidGroup parent:', fluidGroup.parent);
 
     // Store references for animation
     gastricFluid = fluidGroup;
@@ -402,6 +1159,159 @@ function createGastricFluid() {
         bubbleGroup.add(bubble);
     }
     scene.add(bubbleGroup);
+}
+
+// Water physics implementation disabled - keeping original gastric fluid
+function replaceWithWaterShader_DISABLED() {
+    console.log('=== REPLACING WITH WATER SHADER ===');
+    
+    // Find the water surface
+    let waterSurface = null;
+    scene.traverse((object) => {
+        if (object.name === 'WaterPlane' && object.isMesh) {
+            waterSurface = object;
+            console.log('FOUND WaterPlane!', object);
+        }
+    });
+    
+    if (!waterSurface) {
+        console.error('ERROR: WaterPlane not found in scene!');
+        console.log('Scene structure:');
+        scene.traverse((object) => {
+            console.log('  -', object.name || object.type, object.isMesh ? '(Mesh)' : '');
+        });
+        return;
+    }
+    
+    console.log('WaterPlane found, replacing with Three.js Water shader...');
+    
+    // Get the geometry and position
+    const geometry = waterSurface.geometry;
+    const position = waterSurface.position.clone();
+    const rotation = waterSurface.rotation.clone();
+    const parent = waterSurface.parent;
+    const userData = { ...waterSurface.userData };
+    
+    // Create water normal maps - use fallback
+    console.log('Creating water normal map...');
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(512, 512);
+    const data = imageData.data;
+    
+    for (let y = 0; y < 512; y++) {
+        for (let x = 0; x < 512; x++) {
+            const i = (y * 512 + x) * 4;
+            const nx = (Math.sin(x * 0.02) * 0.5 + 0.5) * 255;
+            const ny = (Math.cos(y * 0.02) * 0.5 + 0.5) * 255;
+            data[i] = nx;
+            data[i + 1] = ny;
+            data[i + 2] = 255;
+            data[i + 3] = 255;
+        }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    const waterNormals = new THREE.CanvasTexture(canvas);
+    waterNormals.wrapS = THREE.RepeatWrapping;
+    waterNormals.wrapT = THREE.RepeatWrapping;
+    
+    // Get parameters for 3D water volume
+    const cupRadius = 7.0;
+    const cupHeight = 3.5;
+    const cupBottomY = -5.5;
+    const a = cupRadius;
+    const c = cupRadius * 0.9;
+    
+    // Create 3D water volume geometry (cylinder that fills the stomach)
+    const waterVolumeGeometry = new THREE.CylinderGeometry(
+        Math.max(a, c),
+        Math.max(a, c),
+        cupHeight,
+        64
+    );
+    waterVolumeGeometry.scale(1, 1, c / a); // Scale Z to match ellipsoid
+    
+    // Create 3D water volume with transparent material - make it more visible as 3D
+    const waterVolumeMaterial = new THREE.MeshStandardMaterial({
+        color: 0xccaa44,
+        transparent: true,
+        opacity: 0.7, // More opaque so it's clearly visible as 3D
+        roughness: 0.05,
+        metalness: 0.4,
+        side: THREE.DoubleSide
+    });
+    
+    const waterVolume = new THREE.Mesh(waterVolumeGeometry, waterVolumeMaterial);
+    waterVolume.position.y = cupBottomY + cupHeight / 2; // Center of the water volume
+    waterVolume.position.x = 0;
+    waterVolume.position.z = 0;
+    waterVolume.receiveShadow = true;
+    waterVolume.castShadow = false;
+    waterVolume.visible = true; // Ensure it's visible
+    waterVolume.userData.type = 'gastricFluid';
+    waterVolume.userData.name = 'Gastric Fluid Volume';
+    console.log('Created 3D water volume at position:', waterVolume.position, 'visible:', waterVolume.visible);
+    
+    // Create the water surface (top) using Three.js Water shader
+    const waterSurfaceGeometry = geometry.clone();
+    const water = new Water(waterSurfaceGeometry, {
+        textureWidth: 512,
+        textureHeight: 512,
+        waterNormals: waterNormals,
+        sunDirection: new THREE.Vector3(0, 1, 0),
+        sunColor: 0xffffff,
+        waterColor: 0xccaa44, // Gastric fluid color
+        distortionScale: 3.7,
+        fog: scene.fog !== undefined
+    });
+    
+    water.rotation.copy(rotation);
+    water.position.copy(position);
+    water.userData = userData;
+    water.userData.isWater = true;
+    
+    // Remove old surface and add new water (both 3D volume and animated surface)
+    if (parent) {
+        parent.remove(waterSurface);
+        parent.add(waterVolume); // 3D water volume (fills the stomach)
+        parent.add(water); // Water surface (animated top)
+        console.log('Replaced WaterPlane with 3D water volume + surface in parent:', parent);
+    } else {
+        scene.remove(waterSurface);
+        scene.add(waterVolume); // 3D water volume
+        scene.add(water); // Water surface
+        console.log('Replaced WaterPlane with 3D water volume + surface in scene');
+    }
+    
+    // REMOVE the old fluid body completely since we're replacing with water
+    if (gastricFluid && gastricFluid.userData && gastricFluid.userData.fluidBody) {
+        const oldFluidBody = gastricFluid.userData.fluidBody;
+        if (oldFluidBody.parent) {
+            oldFluidBody.parent.remove(oldFluidBody);
+            console.log('Removed old fluid body from parent');
+        } else {
+            scene.remove(oldFluidBody);
+            console.log('Removed old fluid body from scene');
+        }
+    }
+    
+    // Store both water surface and volume
+    water.userData.waterVolume = waterVolume;
+    
+    // Update reference
+    if (gastricFluid && gastricFluid.userData) {
+        gastricFluid.userData.waterSurface = water;
+        gastricFluid.userData.waterVolume = waterVolume; // Store volume reference too
+    }
+    
+    waterList = [water, waterVolume]; // Include volume in water list for potential animation
+    console.log('Water replacement complete!');
+    console.log('  Water surface:', water);
+    console.log('  Water volume (3D):', waterVolume);
+    console.log('  Volume position:', waterVolume.position);
+    console.log('  Volume visible:', waterVolume.visible);
 }
 
 function createFluidTexture(width, height) {
@@ -504,6 +1414,8 @@ function createParticles() {
         particle.userData.type = 'particle';
         particle.userData.name = 'Food Particles';
         particle.userData.description = 'Partially digested food particles being broken down by gastric acid and enzymes.';
+        particle.userData.isDigested = false; // Game: track if particle has been digested
+        particle.userData.points = Math.floor(Math.random() * 5) + 5; // 5-10 points per particle
         
         particle.castShadow = true;
         particle.receiveShadow = true;
@@ -511,6 +1423,8 @@ function createParticles() {
         particleGroup.add(particle);
         particleData.push(particle);
     }
+    
+    totalParticles = particleCount;
 
     particles = particleGroup;
     particles.userData.particleData = particleData;
@@ -638,6 +1552,7 @@ function hideTooltip() {
     if (!tooltip) return;
     tooltip.classList.remove('visible');
 }
+
 
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;

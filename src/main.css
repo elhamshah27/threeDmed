@@ -17,3 +17,82 @@ h1 {
     font-style: sans-serif;
     margin-top: 0px;
 }
+
+.mode-toggle {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 100;
+    display: flex;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+}
+
+.mode-toggle button {
+    padding: 12px 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 6px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: sans-serif;
+}
+
+.mode-toggle button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.mode-toggle button.active {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.7);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+}
+
+.organ-labels {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 50;
+}
+
+.organ-label {
+    position: absolute;
+    color: white;
+    font-size: 32px;
+    font-weight: 600;
+    font-family: sans-serif;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.organ-label.visible {
+    opacity: 1;
+}
+
+#heart-label {
+    top: 10%;
+    left: 10%;
+}
+
+#brain-label {
+    top: 10%;
+    right: 10%;
+}
+
+#stomach-label {
+    bottom: 10%;
+    left: 50%;
+    transform: translateX(-50%);
+}

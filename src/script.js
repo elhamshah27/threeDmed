@@ -62,7 +62,7 @@ window.onload = async function() {
     url = 'models/fullbrain.glb';
     gltfLoader.load(url, (gltf) => {
         brain = gltf.scene.children[0];
-        brain.userData.URL = "/brain";
+        brain.userData.URL = "./brain/";
 
         // Store original skeleton mode rotation
         const q = rotationQuaternion(90, [0, 1, 0]);

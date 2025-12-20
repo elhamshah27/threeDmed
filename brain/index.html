@@ -1,24 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>3D Brain</title>
-    <style>
-      html, body {
-        background-color: #000;
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden !important;
-      }
-      canvas { display: block; }
-    </style>
 
-    <!-- Needed so the browser understands the import map in all modern browsers -->
-    <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+<head>
+  <meta charset="utf-8" />
+  <title>3D Brain</title>
+  <style>
+    html,
+    body {
+      background-color: #000;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden !important;
+    }
 
-    <!-- Map bare specifiers "three" and "three/addons/..." to real URLs -->
-    <script type="importmap">
+    canvas {
+      display: block;
+    }
+
+    .back-button {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      padding: 12px 24px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+      z-index: 1000;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    }
+
+    .back-button:hover {
+      background: linear-gradient(135deg, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.9));
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .info-message {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.85), rgba(30, 20, 50, 0.85));
+      color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 16px;
+      z-index: 1000;
+      border: 1px solid rgba(100, 150, 255, 0.3);
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(10px);
+    }
+
+    .info-message p {
+      margin: 0;
+    }
+  </style>
+
+  <!-- Needed so the browser understands the import map in all modern browsers -->
+  <script async src="https://unpkg.com/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+
+  <!-- Map bare specifiers "three" and "three/addons/..." to real URLs -->
+  <script type="importmap">
     {
       "imports": {
         "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -26,11 +74,17 @@
       }
     }
     </script>
-  </head>
-  <body>
-    <!-- Your main module -->
-    <script type="module" src="./script.js"></script>
-  </body>
+</head>
+
+<body>
+  <button class="back-button" onclick="window.location.href='/..'">← Back to Homepage</button>
+  <div class="info-message">
+    <p>🧠 Click on the brain to see the neuron movements!</p>
+  </div>
+  <!-- Your main module -->
+  <script type="module" src="./script.js"></script>
+</body>
+
 </html>
 
 <!--<html>
